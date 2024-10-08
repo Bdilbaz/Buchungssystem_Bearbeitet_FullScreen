@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meetingraum - Buchungssystem - Ebene 4</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #F5F5F5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        header {
+            text-align: center;
+            background-color: #84BD22;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            margin: 0;
+            color: #fff;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+        .date-header {
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* Fünf Spalten für Montag bis Freitag */
+            gap: 15px;
+        }
+        .day-column {
+            display: flex;
+            flex-direction: column;
+        }
+        .day-header {
+            text-align: center;
+            background-color: #299E8E;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .time-block {
+            border: 1px solid #299E8E;
+            border-radius: 5px;
+            padding: 10px;
+            transition: background-color 0.3s;
+            cursor: pointer;
+            background-color: white; /* Setzt die Hintergrundfarbe auf weiß */
+            text-align: center;
+            height: 60px; /* Höhe für 30-Minuten-Slots */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            color: black;
+            margin-bottom: 10px;
+        }
+        .booked-internal {
+            background-color: #86BB22; /* Intern */
+        }
+        .booked-external {
+            background-color: #299E8E; /* Extern */
+        }
+        .modal, .confirm-modal, .cancel-confirm-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content, .confirm-modal-content, .cancel-confirm-modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 600px;
+            height: 400px;
+            text-align: center;
+            position: relative;
+        }
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #299E8E;
+        }
+        .btn-group, .modal-footer {
+            display: flex;
+            justify-content: center; /* Zentrale Ausrichtung */
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            background-color: #84BD22;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.2em; /* Größere Schriftgröße */
+            height: 60px; /* Größerer Button */
+            margin: 0 5px;
+            transition: background-color 0.3s, transform 0.3s; /* Modernes Hover-Design */
+        }
+        .btn:hover {
+            background-color: #299E8E;
+            transform: scale(1.05); /* Vergrößert den Button beim Hover */
+        }
+        .close-btn {
+            background-color: #299E8E;
+            margin-top: 20px;
+        }
+        .feedback-popup {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #84BD22;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+        }
+        .room-details {
+            margin-top: 20px;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: left;
+        }
+        .room-details p {
+            margin: 0;
+        }
+        .booking-overview {
+            margin-top: 30px;
+        }
+        .booking-overview table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .booking-overview th, .booking-overview td {
+            padding: 10px;
+            border: 1px solid #299E8E;
+            text-align: left;
+        }
+        .booking-overview th {
+            background-color: #299E8E;
+            color: white;
+        }
+        .date-navigation {
+            display: flex;
+            justify-content: center; /* Zentrale Ausrichtung */
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .date-navigation button {
+            background-color: #299E8E;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 15px 30px; /* Größere Buttons */
+            cursor: pointer;
+            font-size: 1em;
+            margin: 0 10px;
+            height: auto; /* Anpassung der Höhe */
+        }
+        .date-navigation button:hover {
+            background-color: #84BD22;
+        }
+        input[type="text"],
+        input[type="number"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+        select {
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Meetingraum - Buchungssystem - Ebene 4</h1>
+    </header>
+    <div class="container">
+        <div class="date-navigation">
+            <button id="previousWeek">&lt; Vorherige Woche</button>
+            <select id="roomSelect">
+                <option value="1">Meetingraum 1</option>
+                <option value="2">Meetingraum 2</option>
+                <option value="3">Meetingraum 3</option>
+            </select>
+            <button id="nextWeek">Nächste Woche &gt;</button>
+        </div>
+        <h2>Buchbare Zeiten (Wochenansicht)</h2>
+        <div class="grid" id="timeSlots">
+            <!-- Zeitblöcke werden hier dynamisch hinzugefügt -->
+        </div>
+        <div class="room-details">
+            <p><strong>Maximale Teilnehmerzahl:</strong> 20</p>
+            <p><strong>Technische Ausstattung:</strong> Beamer, Whiteboard, Video-Konferenzsystem</p>
+            <p><strong>Snacks & Getränke:</strong> Verfügbar</p>
+        </div>
+
+        <div class="booking-overview">
+            <h2>Aktuelle Buchungen</h2>
+            <table id="bookingTable">
+                <thead>
+                    <tr>
+                        <th>Slot</th>
+                        <th>Meetingraum</th>
+                        <th>Name</th>
+                        <th>Abteilung</th>
+                        <th>Teilnehmer</th>
+                        <th>Art</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Buchungen werden hier dynamisch hinzugefügt -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal" id="bookingModal">
+        <div class="modal-content">
+            <span class="close" id="closeBookingModal">&times;</span>
+            <h3>Buchungsdetails eingeben</h3>
+            <input type="text" id="nameInput" placeholder="Ihr Name" required>
+            <input type="text" id="departmentInput" placeholder="Ihre Abteilung" required>
+            <input type="number" id="participantsInput" placeholder="Teilnehmerzahl" required>
+            <select id="typeInput">
+                <option value="intern">Intern</option>
+                <option value="extern">Extern</option>
+            </select>
+            <div class="btn-group">
+                <button id="confirmBooking" class="btn">Buchen</button>
+                <button id="cancelBooking" class="btn close-btn">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal confirm-modal" id="confirmModal">
+        <div class="confirm-modal-content">
+            <span class="close" id="closeConfirmModal">&times;</span>
+            <h3>Bestätigung der Buchung</h3>
+            <p id="confirmMessage"></p>
+            <div class="modal-footer">
+                <button id="closeConfirm" class="btn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal cancel-confirm-modal" id="cancelConfirmModal">
+        <div class="cancel-confirm-modal-content">
+            <span class="close" id="closeCancelConfirmModal">&times;</span>
+            <h3>Buchung stornieren</h3>
+            <p id="cancelMessage"></p>
+            <div class="modal-footer">
+                <button id="confirmCancel" class="btn">Ja, stornieren</button>
+                <button id="closeCancel" class="btn close-btn">Nein, zurück</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="feedback-popup" id="feedbackPopup">
+        Buchung erfolgreich! 
+        <span id="feedbackClose" style="cursor: pointer;">&times;</span>
+    </div>
+
+    <script>
+        const bookingModal = document.getElementById('bookingModal');
+        const closeBookingModal = document.getElementById('closeBookingModal');
+        const confirmModal = document.getElementById('confirmModal');
+        const closeConfirmModal = document.getElementById('closeConfirmModal');
+        const cancelConfirmModal = document.getElementById('cancelConfirmModal');
+        const closeCancelConfirmModal = document.getElementById('closeCancelConfirmModal');
+        const feedbackPopup = document.getElementById('feedbackPopup');
+        const feedbackClose = document.getElementById('feedbackClose');
+
+        let bookings = [];
+        const roomSelect = document.getElementById('roomSelect');
+        const timeSlotsContainer = document.getElementById('timeSlots');
+        const bookingTableBody = document.querySelector('#bookingTable tbody');
+
+        let currentWeekStart = new Date(); // Startdatum der aktuellen Woche
+        currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay()); // Setzt auf den ersten Tag der Woche (Sonntag)
+
+        function renderTimeSlots() {
+            timeSlotsContainer.innerHTML = ''; // Leeren der bestehenden Zeitblöcke
+            const daysOfWeek = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+            const timeSlots = [];
+
+            // Generiere Zeitblöcke für die Woche
+            for (let day = 0; day < 7; day++) {
+                const currentDay = new Date(currentWeekStart);
+                currentDay.setDate(currentWeekStart.getDate() + day);
+                const dayName = daysOfWeek[currentDay.getDay()];
+
+                // Füge Zeitblöcke für den Tag hinzu
+                const dayColumn = document.createElement('div');
+                dayColumn.classList.add('day-column');
+                const dayHeader = document.createElement('div');
+                dayHeader.classList.add('day-header');
+                dayHeader.textContent = dayName;
+                dayColumn.appendChild(dayHeader);
+
+                for (let hour = 8; hour < 20; hour++) { // Zeit von 8 bis 19 Uhr (12 Blöcke)
+                    for (let min = 0; min < 60; min += 30) { // Zeitblöcke in 30 Minuten
+                        const timeSlot = new Date(currentDay);
+                        timeSlot.setHours(hour);
+                        timeSlot.setMinutes(min);
+                        const slotId = `${dayName}_${hour}_${min}`;
+
+                        const timeBlock = document.createElement('div');
+                        timeBlock.classList.add('time-block');
+                        timeBlock.textContent = `${hour}:${min === 0 ? '00' : '30'}`;
+                        timeBlock.dataset.slotId = slotId;
+                        timeBlock.dataset.date = currentDay.toISOString().split('T')[0]; // Datum für Buchung
+
+                        // Buchungsstatus für Zeitblöcke setzen
+                        const booking = bookings.find(b => b.slotId === slotId);
+                        if (booking) {
+                            timeBlock.classList.add(booking.type === 'intern' ? 'booked-internal' : 'booked-external');
+                        } else {
+                            timeBlock.onclick = () => openBookingModal(slotId, currentDay);
+                        }
+
+                        dayColumn.appendChild(timeBlock);
+                    }
+                }
+                timeSlotsContainer.appendChild(dayColumn);
+            }
+        }
+
+        function openBookingModal(slotId, date) {
+            bookingModal.style.display = 'flex';
+            const confirmButton = document.getElementById('confirmBooking');
+            confirmButton.onclick = () => confirmBooking(slotId, date);
+        }
+
+        function confirmBooking(slotId, date) {
+            const name = document.getElementById('nameInput').value;
+            const department = document.getElementById('departmentInput').value;
+            const participants = document.getElementById('participantsInput').value;
+            const type = document.getElementById('typeInput').value;
+
+            if (name && department && participants) {
+                bookings.push({
+                    slotId,
+                    name,
+                    department,
+                    participants,
+                    type,
+                    date: date.toISOString().split('T')[0]
+                });
+
+                // Aktualisiere Zeitblöcke und Buchungstabelle
+                renderTimeSlots();
+                updateBookingTable();
+
+                // Zeige Bestätigungsmodal
+                confirmModal.style.display = 'flex';
+                document.getElementById('confirmMessage').textContent = `Buchung für ${slotId} erfolgreich!`;
+                bookingModal.style.display = 'none';
+                showFeedbackPopup();
+            } else {
+                alert('Bitte füllen Sie alle Felder aus.');
+            }
+        }
+
+        function updateBookingTable() {
+            bookingTableBody.innerHTML = ''; // Leeren der bestehenden Buchungstabelle
+            bookings.forEach(booking => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${booking.slotId}</td>
+                    <td>${roomSelect.value}</td>
+                    <td>${booking.name}</td>
+                    <td>${booking.department}</td>
+                    <td>${booking.participants}</td>
+                    <td>${booking.type}</td>
+                `;
+                bookingTableBody.appendChild(row);
+            });
+        }
+
+        function showFeedbackPopup() {
+            feedbackPopup.style.display = 'block';
+            setTimeout(() => {
+                feedbackPopup.style.display = 'none';
+            }, 3000); // Popup nach 3 Sekunden ausblenden
+        }
+
+        closeBookingModal.onclick = () => {
+            bookingModal.style.display = 'none';
+        };
+
+        closeConfirmModal.onclick = () => {
+            confirmModal.style.display = 'none';
+        };
+
+        closeCancelConfirmModal.onclick = () => {
+            cancelConfirmModal.style.display = 'none';
+        };
+
+        feedbackClose.onclick = () => {
+            feedbackPopup.style.display = 'none';
+        };
+
+        document.getElementById('previousWeek').onclick = () => {
+            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+            renderTimeSlots();
+        };
+
+        document.getElementById('nextWeek').onclick = () => {
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            renderTimeSlots();
+        };
+
+        renderTimeSlots(); // Initiale Anzeige der Zeitblöcke
+    </script>
+</body>
+</html>
